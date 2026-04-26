@@ -1,0 +1,32 @@
+# Build output
+bin/
+obj/
+publish/
+publish-standalone/
+TrayApp/bin/
+TrayApp/obj/
+
+# Plugins output (build locally)
+TrayApp/plugins/*.dll
+TrayApp/plugins/*.pdb
+TrayApp/plugins/*.deps.json
+
+# NuGet
+*.nupkg
+packages/
+
+# User files
+*.user
+*.suo
+*.userosscache
+
+# VS
+.vs/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
