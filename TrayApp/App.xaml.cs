@@ -1,4 +1,5 @@
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows;
 using SystemTray = Hardcodet.Wpf.TaskbarNotification;
 using TrayApp.Plugins;
@@ -11,6 +12,7 @@ public partial class App : Application
     private WebSocketServer? _wsServer;
     private PluginManager? _pluginManager;
     private Window? _mainWindow;
+    private bool _isTrayMode;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -22,63 +24,95 @@ public partial class App : Application
         {
             Logger.Error("UnhandledException", ex.ExceptionObject as Exception ?? new Exception(ex.ExceptionObject.ToString()));
         };
-        DispatcherUnhandledException += (s, ex) =>
+
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && IsGuiAvailable())
         {
-            Logger.Error("DispatcherUnhandledException", ex.Exception);
-            ex.Handled = true;
-        };
+            try
+            {
+                StartupTrayMode();
+                return;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("托盘模式启动失败，切换到服务模式", ex);
+            }
+        }
+
+        StartupServiceMode();
+    }
+
+    private static bool IsGuiAvailable()
+    {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            return false;
 
         try
         {
-            _mainWindow = new Window
-            {
-                Width = 0,
-                Height = 0,
-                WindowStyle = WindowStyle.None,
-                ShowInTaskbar = false,
-                ShowActivated = false,
-                Visibility = Visibility.Hidden
-            };
-            _mainWindow.Show();
-            Logger.Info("主窗口创建成功");
-
-            _pluginManager = new PluginManager();
-            Logger.Info("PluginManager 初始化完成，按需动态加载");
-
-            using var icon = SystemIcons.Application;
-            _notifyIcon = new SystemTray.TaskbarIcon
-            {
-                Icon = icon,
-                ToolTipText = "TrayApp - 托盘程序"
-            };
-            Logger.Info("托盘图标创建成功");
-
-            var menu = new System.Windows.Controls.ContextMenu();
-
-            var showStatusItem = new System.Windows.Controls.MenuItem { Header = "显示状态" };
-            showStatusItem.Click += ShowStatusItem_Click;
-            menu.Items.Add(showStatusItem);
-
-            menu.Items.Add(new System.Windows.Controls.Separator());
-
-            var exitItem = new System.Windows.Controls.MenuItem { Header = "退出" };
-            exitItem.Click += ExitItem_Click;
-            menu.Items.Add(exitItem);
-
-            _notifyIcon.ContextMenu = menu;
-            _notifyIcon.TrayMouseDoubleClick += (s, ev) => ShowStatusItem_Click(s, new RoutedEventArgs());
-            Logger.Info("菜单创建成功");
-
-            _wsServer = new WebSocketServer(8761, _pluginManager);
-            _wsServer.Start();
-            Logger.Info("WebSocket服务启动，端口 8761");
+            return SystemParameters.PrimaryScreenWidth > 0;
         }
-        catch (Exception ex)
+        catch
         {
-            Logger.Error("启动失败", ex);
-            MessageBox.Show($"启动失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            Environment.Exit(1);
+            return false;
         }
+    }
+
+    private void StartupTrayMode()
+    {
+        _isTrayMode = true;
+        Logger.Info("运行模式: 托盘模式");
+
+        _mainWindow = new Window
+        {
+            Width = 0,
+            Height = 0,
+            WindowStyle = WindowStyle.None,
+            ShowInTaskbar = false,
+            ShowActivated = false,
+            Visibility = Visibility.Hidden
+        };
+        _mainWindow.Show();
+        Logger.Info("主窗口创建成功");
+
+        _pluginManager = new PluginManager();
+        Logger.Info("PluginManager 初始化完成");
+
+        using var icon = SystemIcons.Application;
+        _notifyIcon = new SystemTray.TaskbarIcon
+        {
+            Icon = icon,
+            ToolTipText = "TrayApp"
+        };
+        Logger.Info("托盘图标创建成功");
+
+        var menu = new System.Windows.Controls.ContextMenu();
+        var showStatusItem = new System.Windows.Controls.MenuItem { Header = "显示状态" };
+        showStatusItem.Click += ShowStatusItem_Click;
+        menu.Items.Add(showStatusItem);
+        menu.Items.Add(new System.Windows.Controls.Separator());
+        var exitItem = new System.Windows.Controls.MenuItem { Header = "退出" };
+        exitItem.Click += ExitItem_Click;
+        menu.Items.Add(exitItem);
+        _notifyIcon.ContextMenu = menu;
+        _notifyIcon.TrayMouseDoubleClick += (s, ev) => ShowStatusItem_Click(s, new RoutedEventArgs());
+        Logger.Info("菜单创建成功");
+
+        _wsServer = new WebSocketServer(8761, _pluginManager);
+        _wsServer.Start();
+        Logger.Info("WebSocket服务启动，端口 8761");
+    }
+
+    private void StartupServiceMode()
+    {
+        _isTrayMode = false;
+        Logger.Info("运行模式: 服务模式");
+
+        _pluginManager = new PluginManager();
+        Logger.Info("PluginManager 初始化完成");
+
+        _wsServer = new WebSocketServer(8761, _pluginManager);
+        _wsServer.Start();
+        Logger.Info("WebSocket服务启动，端口 8761");
+        Logger.Info("按 Ctrl+C 退出");
     }
 
     private void ShowStatusItem_Click(object sender, RoutedEventArgs e)
@@ -87,7 +121,7 @@ public partial class App : Application
         var plugins = _pluginManager?.GetLoadedPlugins() ?? new List<string>();
         MessageBox.Show(
             _mainWindow,
-            $"WebSocket服务: 端口 8761\n已加载插件: {plugins.Count}\n{string.Join("\n", plugins)}",
+            $"运行模式: 托盘模式\nWebSocket服务: 端口 8761\n已加载插件: {plugins.Count}\n{string.Join("\n", plugins)}",
             "TrayApp 状态",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
@@ -102,15 +136,8 @@ public partial class App : Application
     private void ExitApplication()
     {
         Logger.Info("开始退出应用");
-        try
-        {
-            _wsServer?.Stop();
-            Logger.Info("WebSocket服务已停止");
-        }
-        catch (Exception ex)
-        {
-            Logger.Error("停止WebSocket服务失败", ex);
-        }
+        _wsServer?.Stop();
+        Logger.Info("WebSocket服务已停止");
 
         if (_notifyIcon != null)
         {
@@ -121,6 +148,12 @@ public partial class App : Application
 
         _mainWindow?.Close();
         Logger.Info("主窗口已关闭");
+        Environment.Exit(0);
+    }
+
+    public static void RequestShutdown()
+    {
+        Logger.Info("收到远程关闭请求");
         Environment.Exit(0);
     }
 }

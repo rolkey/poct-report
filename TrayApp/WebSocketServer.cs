@@ -124,6 +124,17 @@ public class WebSocketServer
             var method = cmd["method"]?.ToString();
             var parameters = cmd["parameters"]?.ToArray<object>() ?? Array.Empty<object>();
 
+            if (pluginName == "system" && method == "shutdown")
+            {
+                Logger.Info("收到 shutdown 命令");
+                var resp = new { success = true, data = "shutdown" };
+                var data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(resp));
+                await ws.SendAsync(new ArraySegment<byte>(data), WebSocketMessageType.Text, true, CancellationToken.None);
+                await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
+                Task.Delay(100).ContinueWith(_ => App.RequestShutdown());
+                return;
+            }
+
             Logger.Info($"调用插件: {pluginName}, 方法: {method}");
             var result = _pluginManager.Invoke(pluginName ?? "", method ?? "", parameters);
 
