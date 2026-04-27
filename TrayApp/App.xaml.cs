@@ -1,6 +1,6 @@
-using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.IO;
 using SystemTray = Hardcodet.Wpf.TaskbarNotification;
 using TrayApp.Plugins;
 
@@ -76,10 +76,11 @@ public partial class App : Application
         _pluginManager = new PluginManager();
         Logger.Info("PluginManager 初始化完成");
 
-        using var icon = SystemIcons.Application;
+        var iconUri = new Uri("pack://application:,,,/icons/icon_32.ico", UriKind.Absolute);
+        var iconStreamInfo = Application.GetResourceStream(iconUri);
         _notifyIcon = new SystemTray.TaskbarIcon
         {
-            Icon = icon,
+            Icon = new System.Drawing.Icon(iconStreamInfo.Stream),
             ToolTipText = "TrayApp"
         };
         Logger.Info("托盘图标创建成功");
