@@ -1,60 +1,24 @@
 <script setup lang="ts">
-import { ref, onUnmounted } from "vue";
+import { ref } from "vue";
+import { useWebSocket } from "../utils/websocket";
 
-const wsUrl = ref("ws://localhost:8761");
-const testText = ref('{"plugin": "ExamplePlugin", "method": "Execute", "parameters": ["World"]}');
+const { wsUrl, isConnected, connect, disconnect, send } = useWebSocket();
+
+const testText = ref('{"plugin": "ExamplePlugin", "method": "add", "parameters": [100, 200]}');
 const result = ref("");
-const isConnected = ref(false);
-let ws: WebSocket | null = null;
 
-const connect = () => {
-  if (ws) {
-    ws.close();
-  }
-
+const handleConnect = () => {
   result.value = "连接中...";
-  ws = new WebSocket(wsUrl.value);
-
-  ws.onopen = () => {
-    isConnected.value = true;
-    result.value = "已连接";
-  };
-
-  ws.onmessage = (event) => {
-    result.value = event.data;
-  };
-
-  ws.onerror = () => {
-    result.value = "连接错误";
-    isConnected.value = false;
-  };
-
-  ws.onclose = () => {
-    isConnected.value = false;
-    result.value = "已断开";
-  };
+  connect((data) => {
+    result.value = data;
+  });
 };
 
 const sendCommand = () => {
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(testText.value);
-  } else {
+  if (!send(testText.value)) {
     result.value = "请先连接";
   }
 };
-
-const disconnect = () => {
-  if (ws) {
-    ws.close();
-    ws = null;
-  }
-};
-
-onUnmounted(() => {
-  if (ws) {
-    ws.close();
-  }
-});
 
 const count = ref(0);
 </script>
@@ -64,7 +28,7 @@ const count = ref(0);
     <button type="button" class="counter" @click="count++">Count is {{ count }}</button>
     <div style="margin: 10px 0">
       <input type="text" v-model="wsUrl" placeholder="WebSocket URL" style="width: 40%" />
-      <button type="button" class="counter" @click="connect" :disabled="isConnected">
+      <button type="button" class="counter" @click="handleConnect" :disabled="isConnected">
         {{ isConnected ? "已连接" : "连接" }}
       </button>
       <button type="button" class="counter" @click="disconnect" :disabled="!isConnected">
