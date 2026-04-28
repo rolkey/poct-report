@@ -43,13 +43,15 @@ public class PluginManager
             foreach (var mi in methods)
             {
                 var pis = mi.GetParameters();
-                if (pis.Length != (parameters?.Length ?? 0))
+                int paramCount = parameters?.Length ?? 0;
+                int requiredCount = pis.Count(p => !p.IsOptional);
+                if (paramCount < requiredCount || paramCount > pis.Length)
                     continue;
 
                 var converted = new object?[pis.Length];
                 bool match = true;
 
-                for (int i = 0; i < pis.Length; i++)
+                for (int i = 0; i < paramCount; i++)
                 {
                     if (parameters[i] == null)
                     {
@@ -75,6 +77,13 @@ public class PluginManager
                         match = false;
                         break;
                     }
+                }
+
+                // 填充可选参数的默认值
+                for (int i = paramCount; i < pis.Length; i++)
+                {
+                    var defaultVal = pis[i].DefaultValue;
+                    converted[i] = defaultVal == DBNull.Value ? null : defaultVal;
                 }
 
                 if (match)
