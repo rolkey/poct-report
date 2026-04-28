@@ -103,7 +103,7 @@ const count = ref(0);
   <section id="center">
     <button type="button" class="counter" @click="count++">Count is {{ count }}</button>
     <div style="margin: 10px 0">
-      <input type="text" v-model="wsUrl" placeholder="WebSocket URL" style="width: 40%" />
+      <input type="text" v-model="wsUrl" placeholder="WebSocket URL" style="width: 180px" />
       <button type="button" class="counter" @click="handleConnect" :disabled="isConnected">
         {{ isConnected ? "已连接" : "连接" }}
       </button>
@@ -116,7 +116,7 @@ const count = ref(0);
 
     <h3>报表测试</h3>
     <div style="margin: 10px 0">
-      <select v-model="reportType" style="padding: 5px; margin-right: 10px">
+      <select v-model="reportType" style="padding: 5px; margin-right: 10px; width: 140px">
         <option v-for="t in reportTypes" :key="t" :value="t">{{ t }}</option>
       </select>
     </div>
