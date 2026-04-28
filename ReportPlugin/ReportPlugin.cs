@@ -1,8 +1,5 @@
 using System.Data;
 using System.Drawing;
-using System.Drawing.Printing;
-using System.IO;
-using System.Windows.Forms;
 using FastReport;
 using FastReport.Export.Image;
 using FastReport.Export.PdfSimple;
@@ -12,16 +9,16 @@ namespace ReportPlugin;
 
 public class ReportPlugin
 {
-    private static readonly string[] SupportedFormats = { "pdf", "jpg", "png" };
+    private static readonly string[] SupportedFormats = ["pdf", "jpg", "png"];
 
     /// <summary>
     /// 生成报表并导出到文件（打印/预览/导出）
     /// </summary>
-    /// <param name="reportType">报表类型: SimpleList, Group</param>
+    /// <param name="reportName">报表类型: SimpleList, Group</param>
     /// <param name="format">输出格式: pdf, jpg, png</param>
     /// <param name="outputPath">输出目录（可选，默认当前目录）</param>
     /// <returns>生成的文件路径</returns>
-    public string GenerateReport(string reportType, string format = "pdf", string? outputPath = null)
+    public string GenerateReport(string reportName, string format = "pdf", string? outputPath = null)
     {
         format = format.ToLowerInvariant();
         if (!SupportedFormats.Contains(format))
@@ -36,10 +33,10 @@ public class ReportPlugin
         }
 
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var fileName = $"{reportType}_{timestamp}.{format}";
+        var fileName = $"{reportName}_{timestamp}.{format}";
         var filePath = Path.Combine(outputPath, fileName);
 
-        Report report = CreateReport(reportType);
+        Report report = CreateReport(reportName);
 
         try
         {
@@ -70,28 +67,28 @@ public class ReportPlugin
     /// <summary>
     /// 打印报表 - 直接发送到默认打印机
     /// </summary>
-    /// <param name="reportType">报表类型: SimpleList, Group</param>
+    /// <param name="reportName">报表类型: SimpleList, Group</param>
     /// <param name="printerName">打印机名称（可选，默认使用默认打印机）</param>
     /// <summary>
     /// 打印报表 - 直接发送到默认打印机
     /// 注意: FastReport.OpenSource 不支持直接打印，请使用 GenerateReport 生成 PDF 后手动打印
     /// </summary>
-    /// <param name="reportType">报表类型: SimpleList, Group</param>
+    /// <param name="reportName">报表类型: SimpleList, Group</param>
     /// <param name="printerName">打印机名称（可选，默认使用默认打印机）</param>
     /// <returns>生成的 PDF 文件路径，可通过系统打印</returns>
-    public string PrintReport(string reportType, string? printerName = null)
+    public string PrintReport(string reportName, string? printerName = null)
     {
-        var filePath = GenerateReport(reportType, "pdf");
+        var filePath = GenerateReport(reportName, "pdf");
         return filePath;
     }
 
     /// <summary>
     /// 预览报表 - 返回 Base64 编码的图片用于前端显示
     /// </summary>
-    /// <param name="reportType">报表类型: SimpleList, Group</param>
+    /// <param name="reportName">报表类型: SimpleList, Group</param>
     /// <param name="format">图片格式: jpg, png</param>
     /// <returns>Base64 编码的图片字符串</returns>
-    public string PreviewReport(string reportType, string format = "png")
+    public string PreviewReport(string reportName, string format = "png")
     {
         format = format.ToLowerInvariant();
         if (format != "jpg" && format != "png")
@@ -99,7 +96,7 @@ public class ReportPlugin
             format = "png";
         }
 
-        Report report = CreateReport(reportType);
+        Report report = CreateReport(reportName);
 
         try
         {
@@ -125,25 +122,25 @@ public class ReportPlugin
     /// <summary>
     /// 设置报表 - 配置报表参数并返回配置信息
     /// </summary>
-    /// <param name="reportType">报表类型</param>
+    /// <param name="reportName">报表类型</param>
     /// <param name="configJson">JSON 格式的配置参数</param>
     /// <returns>配置结果 JSON</returns>
-    public string ConfigureReport(string reportType, string? configJson = null)
+    public string ConfigureReport(string reportName, string? configJson = null)
     {
         var config = new
         {
-            reportType,
+            reportName,
             availableFormats = SupportedFormats,
-            supportedReportTypes = GetReportTypes(),
+            supportedreportNames = GetreportNames(),
             customConfig = configJson ?? "{}"
         };
 
         return Newtonsoft.Json.JsonConvert.SerializeObject(config);
     }
 
-    private Report CreateReport(string reportType)
+    private Report CreateReport(string reportName)
     {
-        return reportType switch
+        return reportName switch
         {
             "SimpleList" => GetSimpleListReport(),
             "Group" => GetGroupReport(),
@@ -280,5 +277,5 @@ public class ReportPlugin
 
     public string GetInfo() => "ReportPlugin v1.0 - FastReport";
 
-    public string[] GetReportTypes() => new[] { "SimpleList", "Group" };
+    public string[] GetreportNames() => new[] { "SimpleList", "Group" };
 }
