@@ -6,6 +6,9 @@ publish-standalone/
 TrayApp/bin/
 TrayApp/obj/
 
+# other directory
+FastReport.Net Demo/
+
 # Plugins output (build locally)
 TrayApp/plugins/*.dll
 TrayApp/plugins/*.pdb
