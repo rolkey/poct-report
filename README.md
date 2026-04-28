@@ -13,3 +13,9 @@
   Continue  opencode -s ses_2370735fcffeonUdfLlVVtuoqM
 ```
 
+## 项目信息整理
+
+```
+  Session   /init-deep knowledge base generation
+  Continue  opencode -s ses_22d5fbf4bffe9ogjDIIAFrM6Zk
+```
