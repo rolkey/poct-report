@@ -1,0 +1,8 @@
+Build: SUCCESS
+0 Error(s)
+0 Warning(s)
+File: TrayApp/PluginManager.cs
+Changes:
+  1. Line 46-49: Guard condition changed from strict equality to range check [requiredCount, pis.Length]
+  2. Line 54: Loop boundary changed from pis.Length to paramCount (prevents IndexOutOfRange)
+  3. Lines 82-87: Added default value fill for optional params (DBNull.Value -> null)
