@@ -4,7 +4,7 @@ import { useWebSocket } from "../utils/websocket";
 
 const { wsUrl, isConnected, connect, disconnect, send } = useWebSocket();
 
-const testText = ref('{"plugin": "ExamplePlugin", "method": "add", "parameters": [100, 200]}');
+const testText = ref('{"plugin": "ExamplePlugin", "method": "add", "params": [100, 200]}');
 const result = ref("");
 
 // 报表相关
