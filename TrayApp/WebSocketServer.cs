@@ -122,7 +122,7 @@ public class WebSocketServer
             var cmd = JObject.Parse(json);
             var pluginName = cmd["plugin"]?.ToString();
             var method = cmd["method"]?.ToString();
-            var parameters = cmd["parameters"]?.ToArray<object>() ?? Array.Empty<object>();
+            var parameters = cmd["params"]?.ToArray<object>() ?? Array.Empty<object>();
 
             if (pluginName == "system" && method == "shutdown")
             {
