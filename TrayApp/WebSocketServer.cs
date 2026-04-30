@@ -141,6 +141,7 @@ public class WebSocketServer
         try
         {
             var cmd = JObject.Parse(json);
+            var command = cmd["command"]?.ToString();
             var pluginName = cmd["plugin"]?.ToString();
             var method = cmd["method"]?.ToString();
             var parameters = cmd["params"]?.ToArray<object>() ?? Array.Empty<object>();
@@ -159,7 +160,7 @@ public class WebSocketServer
             Logger.Info($"调用插件: {pluginName}, 方法: {method}");
             var result = _pluginManager.Invoke(pluginName ?? "", method ?? "", parameters);
 
-            var response = new { success = true, data = result };
+            var response = new { success = true, command, data = result };
             var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(response));
             await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
             Logger.Info($"返回结果: {JsonConvert.SerializeObject(response)}");
