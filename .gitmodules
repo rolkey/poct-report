@@ -1,0 +1,2 @@
+[submodule "FastReport"]
+	url = git@github.com:rolkey/FastReport6.0.git

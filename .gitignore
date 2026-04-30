@@ -2,6 +2,7 @@
 bin/
 obj/
 publish/
+export/
 publish-standalone/
 TrayApp/bin/
 TrayApp/obj/
@@ -22,6 +23,7 @@ packages/
 *.user
 *.suo
 *.userosscache
+*.tar.gz
 
 # VS
 .vs/
