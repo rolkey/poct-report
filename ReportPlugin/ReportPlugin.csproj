@@ -8,9 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FastReport.OpenSource" Version="2025.1.0" />
-    <PackageReference Include="FastReport.OpenSource.Export.PdfSimple" Version="2025.1.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FastReport\FastReport.OpenSource\FastReport.OpenSource.csproj" />
+    <ProjectReference Include="..\FastReport\Extras\OpenSource\FastReport.OpenSource.Export.PdfSimple\FastReport.OpenSource.Export.PdfSimple\FastReport.OpenSource.Export.PdfSimple.csproj" />
   </ItemGroup>
 
 </Project>

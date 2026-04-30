@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.WebSockets;
 using System.Runtime.InteropServices;
@@ -15,6 +16,8 @@ public class WebSocketServer
     private readonly PluginManager _pluginManager;
     private bool _isRunning;
     private readonly int _port;
+    private readonly CancellationTokenSource _cts = new();
+    private readonly ConcurrentDictionary<WebSocket, byte> _activeSockets = new();
 
     public WebSocketServer(int port, PluginManager pluginManager)
     {
@@ -22,7 +25,6 @@ public class WebSocketServer
         _pluginManager = pluginManager;
         _listener = new HttpListener();
 
-        // Windows 用 localhost 或 127.0.0.1 (无需管理员)，Linux 用 0.0.0.0
         var host = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "localhost" : "0.0.0.0";
         var prefix = $"http://{host}:{port}/";
 
@@ -49,6 +51,15 @@ public class WebSocketServer
     public void Stop()
     {
         _isRunning = false;
+        _cts.Cancel();
+
+        foreach (var ws in _activeSockets.Keys.ToArray())
+        {
+            try { ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Server shutting down", CancellationToken.None).Wait(100); } catch { }
+            ws.Dispose();
+        }
+        _activeSockets.Clear();
+
         _listener.Stop();
         Logger.Info("HttpListener 已停止");
     }
@@ -86,6 +97,7 @@ public class WebSocketServer
     {
         var wsContext = await context.AcceptWebSocketAsync(null);
         var ws = wsContext.WebSocket;
+        _activeSockets.TryAdd(ws, 0);
         Logger.Info("WebSocket 连接已建立");
 
         try
@@ -93,7 +105,7 @@ public class WebSocketServer
             while (ws.State == WebSocketState.Open)
             {
                 var buffer = new byte[4096];
-                var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
+                var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), _cts.Token);
 
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
@@ -107,9 +119,18 @@ public class WebSocketServer
                 ProcessCommand(json, ws);
             }
         }
+        catch (OperationCanceledException)
+        {
+            Logger.Info("WebSocket 被取消（服务停止）");
+        }
         catch (Exception ex)
         {
             Logger.Error("HandleWebSocket 异常", ex);
+        }
+        finally
+        {
+            _activeSockets.TryRemove(ws, out _);
+            ws.Dispose();
         }
 
         Logger.Info("WebSocket 连接已关闭");

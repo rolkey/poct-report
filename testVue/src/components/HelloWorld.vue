@@ -8,9 +8,15 @@ const testText = ref('{"plugin": "ExamplePlugin", "method": "add", "params": [10
 const result = ref("");
 
 // 报表相关
-const reportType = ref("SimpleList");
+const reportType = ref("Barcode.frx");
 const previewImage = ref("");
-const reportTypes = ["SimpleList", "Group"];
+const reportTypes = [
+  "Barcode.frx",
+  "Groups.frx",
+  "Master-Detail.frx",
+  "Simple List.frx",
+  "Simple Matrix.frx",
+];
 
 const handleConnect = () => {
   result.value = "连接中...";

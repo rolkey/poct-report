@@ -4,29 +4,47 @@ using FastReport;
 using FastReport.Export.Image;
 using FastReport.Export.PdfSimple;
 using FastReport.Utils;
+// using Newtonsoft.Json; // 添加这一行
 
 namespace ReportPlugin;
 
 public class ReportPlugin
 {
-    private static readonly string[] SupportedFormats = ["pdf", "jpg", "png"];
+    private static readonly string[] SupportedFormats = ["pdf", "jpg", "png", "html"];
 
-    /// <summary>
-    /// 生成报表并导出到文件（打印/预览/导出）
-    /// </summary>
-    /// <param name="reportName">报表类型: SimpleList, Group</param>
-    /// <param name="format">输出格式: pdf, jpg, png</param>
-    /// <param name="outputPath">输出目录（可选，默认当前目录）</param>
-    /// <returns>生成的文件路径</returns>
+    public static string TemplateDirectory { get; set; } = GetDefaultTemplateDirectory();
+
+    private static string GetDefaultTemplateDirectory()
+    {
+        var assemblyLocation = System.Reflection.Assembly.GetExecutingAssembly().Location;
+        var baseDir = string.IsNullOrEmpty(assemblyLocation)
+            ? Directory.GetCurrentDirectory()
+            : Path.GetDirectoryName(assemblyLocation)!;
+        return Path.Combine(baseDir, "templates");
+    }
+
+    private static void RegisterNorthWindData(Report report)
+    {
+        var nwindPath = Path.Combine(TemplateDirectory, "nwind.xml");
+        if (!File.Exists(nwindPath))
+        {
+            throw new FileNotFoundException($"nwind.xml not found at: {nwindPath}");
+        }
+
+        var dataSet = new DataSet();
+        dataSet.ReadXml(nwindPath);
+        report.RegisterData(dataSet, "NorthWind");
+    }
+
     public string GenerateReport(string reportName, string format = "pdf", string? outputPath = null)
     {
         format = format.ToLowerInvariant();
         if (!SupportedFormats.Contains(format))
         {
-            throw new ArgumentException($"不支持的格式: {format}. 支持: {string.Join(", ", SupportedFormats)}");
+            throw new ArgumentException($"Unsupported format: {format}");
         }
 
-        outputPath ??= Directory.GetCurrentDirectory();
+        outputPath ??= Path.Combine(Directory.GetCurrentDirectory(), "export");
         if (!Directory.Exists(outputPath))
         {
             Directory.CreateDirectory(outputPath);
@@ -35,8 +53,14 @@ public class ReportPlugin
         var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
         var fileName = $"{reportName}_{timestamp}.{format}";
         var filePath = Path.Combine(outputPath, fileName);
+        var reportFile = Path.Combine(TemplateDirectory, reportName);
 
-        Report report = CreateReport(reportName);
+        if (!File.Exists(reportFile))
+        {
+            throw new FileNotFoundException($"Report template not found at: {reportFile}");
+        }
+
+        Report report = CreateReport(reportFile);
 
         try
         {
@@ -45,14 +69,11 @@ public class ReportPlugin
             switch (format)
             {
                 case "pdf":
-                    var pdfExport = new PDFSimpleExport();
-                    report.Export(pdfExport, filePath);
+                    report.Export(new PDFSimpleExport(), filePath);
                     break;
                 case "jpg":
                 case "png":
-                    var imageExport = new ImageExport();
-                    imageExport.ImageFormat = format == "jpg" ? ImageExportFormat.Jpeg : ImageExportFormat.Png;
-                    report.Export(imageExport, filePath);
+                    report.Export(new ImageExport { ImageFormat = format == "jpg" ? ImageExportFormat.Jpeg : ImageExportFormat.Png }, filePath);
                     break;
             }
 
@@ -64,30 +85,11 @@ public class ReportPlugin
         }
     }
 
-    /// <summary>
-    /// 打印报表 - 直接发送到默认打印机
-    /// </summary>
-    /// <param name="reportName">报表类型: SimpleList, Group</param>
-    /// <param name="printerName">打印机名称（可选，默认使用默认打印机）</param>
-    /// <summary>
-    /// 打印报表 - 直接发送到默认打印机
-    /// 注意: FastReport.OpenSource 不支持直接打印，请使用 GenerateReport 生成 PDF 后手动打印
-    /// </summary>
-    /// <param name="reportName">报表类型: SimpleList, Group</param>
-    /// <param name="printerName">打印机名称（可选，默认使用默认打印机）</param>
-    /// <returns>生成的 PDF 文件路径，可通过系统打印</returns>
     public string PrintReport(string reportName, string? printerName = null)
     {
-        var filePath = GenerateReport(reportName, "pdf");
-        return filePath;
+        return GenerateReport(reportName, "pdf");
     }
 
-    /// <summary>
-    /// 预览报表 - 返回 Base64 编码的图片用于前端显示
-    /// </summary>
-    /// <param name="reportName">报表类型: SimpleList, Group</param>
-    /// <param name="format">图片格式: jpg, png</param>
-    /// <returns>Base64 编码的图片字符串</returns>
     public string PreviewReport(string reportName, string format = "png")
     {
         format = format.ToLowerInvariant();
@@ -103,15 +105,9 @@ public class ReportPlugin
             report.Prepare();
 
             using var ms = new MemoryStream();
-            var imageExport = new ImageExport
-            {
-                ImageFormat = format == "jpg" ? ImageExportFormat.Jpeg : ImageExportFormat.Png
-            };
-            report.Export(imageExport, ms);
+            report.Export(new ImageExport { ImageFormat = format == "jpg" ? ImageExportFormat.Jpeg : ImageExportFormat.Png }, ms);
 
-            var bytes = ms.ToArray();
-            var base64 = Convert.ToBase64String(bytes);
-            return $"data:image/{format};base64,{base64}";
+            return $"data:image/{format};base64,{Convert.ToBase64String(ms.ToArray())}";
         }
         finally
         {
@@ -119,19 +115,13 @@ public class ReportPlugin
         }
     }
 
-    /// <summary>
-    /// 设置报表 - 配置报表参数并返回配置信息
-    /// </summary>
-    /// <param name="reportName">报表类型</param>
-    /// <param name="configJson">JSON 格式的配置参数</param>
-    /// <returns>配置结果 JSON</returns>
     public string ConfigureReport(string reportName, string? configJson = null)
     {
         var config = new
         {
             reportName,
             availableFormats = SupportedFormats,
-            supportedreportNames = GetreportNames(),
+            supportedReportNames = GetReportNames(),
             customConfig = configJson ?? "{}"
         };
 
@@ -140,6 +130,20 @@ public class ReportPlugin
 
     private Report CreateReport(string reportName)
     {
+        var frxPath = Path.Combine(TemplateDirectory, reportName);
+        if (File.Exists(frxPath))
+        {
+            var report = new Report();
+            report.Load(frxPath);
+
+            if (!reportName.Contains("Barcode", StringComparison.OrdinalIgnoreCase))
+            {
+                RegisterNorthWindData(report);
+            }
+
+            return report;
+        }
+
         return reportName switch
         {
             "SimpleList" => GetSimpleListReport(),
@@ -153,7 +157,6 @@ public class ReportPlugin
         var report = new Report();
         var dataSet = CreateDemoDataSet();
         report.RegisterData(dataSet);
-
         report.GetDataSource("Employees").Enabled = true;
 
         var page = new ReportPage();
@@ -169,7 +172,7 @@ public class ReportPlugin
             Parent = page.ReportTitle,
             Bounds = new RectangleF(Units.Centimeters * 5, 0, Units.Centimeters * 10, Units.Centimeters * 1),
             Font = new Font("Arial", 14, FontStyle.Bold),
-            Text = "员工列表 / Employee List",
+            Text = "Employee List",
             HorzAlign = HorzAlign.Center
         };
         titleText.CreateUniqueName();
@@ -228,7 +231,7 @@ public class ReportPlugin
             Parent = groupHeader,
             Bounds = new RectangleF(0, 0, Units.Centimeters * 10, Units.Centimeters * 0.8f),
             Font = new Font("Arial", 12, FontStyle.Bold),
-            Text = "部门: [Employees.Department]",
+            Text = "Department: [Employees.Department]",
             VertAlign = VertAlign.Center,
             Fill = new LinearGradientFill(Color.LightYellow, Color.White, 90)
         };
@@ -254,7 +257,7 @@ public class ReportPlugin
         return report;
     }
 
-    private DataSet CreateDemoDataSet()
+    private static DataSet CreateDemoDataSet()
     {
         var ds = new DataSet();
         var dt = new DataTable("Employees");
@@ -262,14 +265,14 @@ public class ReportPlugin
         dt.Columns.Add("Name", typeof(string));
         dt.Columns.Add("Department", typeof(string));
 
-        dt.Rows.Add(1, "张三", "研发部");
-        dt.Rows.Add(2, "李四", "研发部");
-        dt.Rows.Add(3, "王五", "市场部");
-        dt.Rows.Add(4, "赵六", "市场部");
-        dt.Rows.Add(5, "钱七", "人事部");
-        dt.Rows.Add(6, "孙八", "人事部");
-        dt.Rows.Add(7, "周九", "研发部");
-        dt.Rows.Add(8, "吴十", "财务部");
+        dt.Rows.Add(1, "Alice", "Engineering");
+        dt.Rows.Add(2, "Bob", "Engineering");
+        dt.Rows.Add(3, "Charlie", "Marketing");
+        dt.Rows.Add(4, "Diana", "Marketing");
+        dt.Rows.Add(5, "Eve", "HR");
+        dt.Rows.Add(6, "Frank", "HR");
+        dt.Rows.Add(7, "Grace", "Engineering");
+        dt.Rows.Add(8, "Hank", "Finance");
 
         ds.Tables.Add(dt);
         return ds;
@@ -277,5 +280,5 @@ public class ReportPlugin
 
     public string GetInfo() => "ReportPlugin v1.0 - FastReport";
 
-    public string[] GetreportNames() => new[] { "SimpleList", "Group" };
+    public string[] GetReportNames() => new[] { "SimpleList", "Group", "Simple List.frx", "Master-Detail.frx", "Barcode.frx", "Groups.frx", "Simple Matrix.frx" };
 }

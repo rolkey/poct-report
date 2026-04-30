@@ -19,3 +19,24 @@
   Session   /init-deep knowledge base generation
   Continue  opencode -s ses_22d5fbf4bffe9ogjDIIAFrM6Zk
 ```
+
+## bug1会话记录
+
+```
+  Session   bug1 requirements.md 初步计划
+  Continue  opencode -s ses_22c08fe47ffeWOR8X5yzo16dn6
+```
+
+## 完善功能
+
+```
+  Session   Exploration for ReportPlugin in FastReport.Net De…
+  Continue  opencode -s ses_228eb79f6ffesIpq7l06GW77FD
+```
+
+## FastReport项目调整
+
+```
+  Session   FastReport项目.NET版本调整
+  Continue  opencode -s ses_227397608ffeAhpVM66UZ1AvJm
+```
