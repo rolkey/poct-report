@@ -1,32 +1,63 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useWebSocket } from "../utils/websocket";
 
-const { wsUrl, isConnected, connect, disconnect, send } = useWebSocket();
+const { wsUrl, isConnected, connect, disconnect, send, onMessage, offMessage } = useWebSocket();
 
-const testText = ref('{"plugin": "ExamplePlugin", "method": "add", "params": [100, 200]}');
 const result = ref("");
-
-// 报表相关
-const reportType = ref("Barcode.frx");
-const previewImage = ref("");
+const reportType = ref("Simple List.frx");
 const reportTypes = [
+  "Simple List.frx",
+  "Master-Detail.frx",
   "Barcode.frx",
   "Groups.frx",
-  "Master-Detail.frx",
-  "Simple List.frx",
   "Simple Matrix.frx",
 ];
 
-const handleConnect = () => {
-  result.value = "连接中...";
-  connect((data) => {
-    result.value = data;
-  });
+// 预览弹窗
+const showPreview = ref(false);
+const previewPdfData = ref("");
+
+const msgFunc = (data) => {
+  result.value = data;
+  try {
+    const res = JSON.parse(data);
+    if (res.command === "generateReport") {
+      // result.value 已在上面赋值，无需额外处理
+    } else if (res.command === "previewReport") {
+      // 假设你的 base64 字符串（不含 data: 前缀）
+      const base64String = res.data;
+
+      // 转为二进制
+      const binaryString = atob(base64String);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // 创建 Blob URL
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const blobUrl = URL.createObjectURL(blob);
+
+      // 设置到 iframe
+      // document.querySelector("iframe").src = blobUrl;
+
+      previewPdfData.value = blobUrl;
+      showPreview.value = true;
+    }
+  } catch {
+    // 非 JSON 或非预览数据，忽略
+  }
 };
 
-const sendCommand = () => {
-  if (!send(testText.value)) {
+const handleConnect = () => {
+  result.value = "连接中...";
+  connect();
+};
+
+const sendCommand = (cmd: object) => {
+  const json = JSON.stringify(cmd);
+  if (!send(json)) {
     result.value = "请先连接";
   }
 };
@@ -34,80 +65,52 @@ const sendCommand = () => {
 // 生成报表
 const generateReport = () => {
   const cmd = {
-    type: "invoke",
+    command: "generateReport",
     plugin: "ReportPlugin",
     method: "GenerateReport",
     params: [reportType.value, "pdf"],
   };
-  testText.value = JSON.stringify(cmd);
-  sendCommand();
+  sendCommand(cmd);
 };
 
-// 打印报表
-const printReport = () => {
-  const cmd = {
-    type: "invoke",
-    plugin: "ReportPlugin",
-    method: "PrintReport",
-    params: [reportType.value],
-  };
-  testText.value = JSON.stringify(cmd);
-  sendCommand();
-};
-
-// 预览报表
+// 预览报表（生成PDF并在弹窗中展示）
 const previewReport = () => {
   const cmd = {
-    type: "invoke",
+    command: "previewReport",
     plugin: "ReportPlugin",
     method: "PreviewReport",
-    params: [reportType.value, "png"],
-  };
-  testText.value = JSON.stringify(cmd);
-  connect((data) => {
-    result.value = data;
-    try {
-      const res = JSON.parse(data);
-      if (res.result && res.result.startsWith("data:image")) {
-        previewImage.value = res.result;
-      }
-    } catch (e) {
-      console.error("解析预览结果失败", e);
-    }
-  });
-  sendCommand();
-};
-
-// 获取配置
-const configureReport = () => {
-  const cmd = {
-    type: "invoke",
-    plugin: "ReportPlugin",
-    method: "ConfigureReport",
     params: [reportType.value],
   };
-  testText.value = JSON.stringify(cmd);
-  sendCommand();
+  sendCommand(cmd);
 };
 
-// 获取报表类型
-const getReportTypes = () => {
+// 设计报表
+const designReport = () => {
   const cmd = {
-    type: "invoke",
+    command: "designReport",
     plugin: "ReportPlugin",
-    method: "GetReportTypes",
-    params: [],
+    method: "DesignReport",
+    params: [reportType.value],
   };
-  testText.value = JSON.stringify(cmd);
-  sendCommand();
+  sendCommand(cmd);
 };
 
-const count = ref(0);
+const closePreview = () => {
+  showPreview.value = false;
+  previewPdfData.value = "";
+};
+
+onMounted(() => {
+  onMessage(msgFunc);
+});
+
+onBeforeUnmount(() => {
+  offMessage(msgFunc);
+});
 </script>
 
 <template>
   <section id="center">
-    <button type="button" class="counter" @click="count++">Count is {{ count }}</button>
     <div style="margin: 10px 0">
       <input type="text" v-model="wsUrl" placeholder="WebSocket URL" style="width: 180px" />
       <button type="button" class="counter" @click="handleConnect" :disabled="isConnected">
@@ -120,35 +123,82 @@ const count = ref(0);
 
     <hr style="margin: 20px 0; width: 60%" />
 
-    <h3>报表测试</h3>
+    <h3>报表操作</h3>
     <div style="margin: 10px 0">
-      <select v-model="reportType" style="padding: 5px; margin-right: 10px; width: 140px">
+      <select v-model="reportType" style="padding: 5px; margin-right: 10px; width: 160px">
         <option v-for="t in reportTypes" :key="t" :value="t">{{ t }}</option>
       </select>
     </div>
-    <div style="margin: 10px 0">
+    <div style="margin: 10px 0; display: flex; gap: 10px; justify-content: center">
       <button type="button" class="counter" @click="generateReport">生成报表</button>
-      <button type="button" class="counter" @click="printReport">打印报表</button>
       <button type="button" class="counter" @click="previewReport">预览报表</button>
-      <button type="button" class="counter" @click="configureReport">获取配置</button>
-      <button type="button" class="counter" @click="getReportTypes">获取报表类型</button>
-    </div>
-
-    <div v-if="previewImage" style="margin: 10px 0">
-      <h4>预览效果</h4>
-      <img :src="previewImage" alt="报表预览" style="max-width: 80%; border: 1px solid #ccc" />
+      <button type="button" class="counter" @click="designReport">设计报表</button>
     </div>
 
     <hr style="margin: 20px 0; width: 60%" />
 
-    <h3>通用命令测试</h3>
-    <input type="text" placeholder="测试文本" v-model="testText" style="width: 60%" />
-    <button type="button" class="counter" @click="sendCommand">发送命令</button>
     <div style="margin-top: 10px; width: 60%">
-      <textarea readonly v-model="result" rows="4" style="width: 80%"></textarea>
+      <textarea readonly v-model="result" rows="6" style="width: 80%"></textarea>
     </div>
   </section>
+
+  <!-- PDF 预览弹窗 -->
+  <div v-if="showPreview" class="modal-overlay" @click.self="closePreview">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>报表预览 - {{ reportType }}</h3>
+        <button type="button" class="counter" @click="closePreview">关闭</button>
+      </div>
+      <div class="modal-body">
+        <iframe
+          v-if="showPreview"
+          :src="previewPdfData"
+          style="width: 100%; height: 100%; border: none"
+        ></iframe>
+      </div>
+    </div>
+  </div>
 
   <div class="ticks"></div>
   <section id="spacer"></section>
 </template>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--bg-color, #fff);
+  border-radius: 8px;
+  width: 90%;
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border-color, #ccc);
+}
+
+.modal-body {
+  flex: 1;
+  padding: 10px;
+  overflow: hidden;
+}
+</style>

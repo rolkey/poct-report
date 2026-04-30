@@ -85,29 +85,25 @@ public class ReportPlugin
         }
     }
 
-    public string PrintReport(string reportName, string? printerName = null)
+    public string PreviewReport(string reportName)
     {
-        return GenerateReport(reportName, "pdf");
-    }
+        var outputDir = Path.Combine(Directory.GetCurrentDirectory(), "export");
+        if (!Directory.Exists(outputDir))
+            Directory.CreateDirectory(outputDir);
 
-    public string PreviewReport(string reportName, string format = "png")
-    {
-        format = format.ToLowerInvariant();
-        if (format != "jpg" && format != "png")
-        {
-            format = "png";
-        }
+        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        var filePath = Path.Combine(outputDir, $"{Path.GetFileNameWithoutExtension(reportName)}_{timestamp}.pdf");
 
         Report report = CreateReport(reportName);
 
         try
         {
             report.Prepare();
+            report.Export(new PDFSimpleExport(), filePath);
 
-            using var ms = new MemoryStream();
-            report.Export(new ImageExport { ImageFormat = format == "jpg" ? ImageExportFormat.Jpeg : ImageExportFormat.Png }, ms);
-
-            return $"data:image/{format};base64,{Convert.ToBase64String(ms.ToArray())}";
+            var bytes = File.ReadAllBytes(filePath);
+            // return $"data:application/pdf;base64,{Convert.ToBase64String(bytes)}";
+            return Convert.ToBase64String(bytes);
         }
         finally
         {
@@ -115,17 +111,43 @@ public class ReportPlugin
         }
     }
 
-    public string ConfigureReport(string reportName, string? configJson = null)
+    public string DesignReport(string reportName)
     {
-        var config = new
+        var reportFile = Path.Combine(TemplateDirectory, reportName);
+        if (File.Exists(reportFile))
         {
-            reportName,
-            availableFormats = SupportedFormats,
-            supportedReportNames = GetReportNames(),
-            customConfig = configJson ?? "{}"
-        };
+            var frxContent = File.ReadAllText(reportFile);
+            return Newtonsoft.Json.JsonConvert.SerializeObject(new
+            {
+                templatePath = reportFile,
+                templateName = reportName,
+                templateXml = frxContent,
+                message = "Use this XML to edit the report template in an external editor, then save back to the template path."
+            });
+        }
 
-        return Newtonsoft.Json.JsonConvert.SerializeObject(config);
+        // For code-generated reports (SimpleList, Group), return the structure info
+        var report = CreateReport(reportName);
+        try
+        {
+            report.Prepare();
+            using var ms = new MemoryStream();
+            report.Save(ms);
+            ms.Position = 0;
+            var xml = new System.Xml.XmlDocument();
+            xml.Load(ms);
+            return Newtonsoft.Json.JsonConvert.SerializeObject(new
+            {
+                templatePath = "(code-generated)",
+                templateName = reportName,
+                templateXml = xml.OuterXml,
+                message = "This is a code-generated report. Save the XML as a .frx file to customize."
+            });
+        }
+        finally
+        {
+            report.Dispose();
+        }
     }
 
     private Report CreateReport(string reportName)
