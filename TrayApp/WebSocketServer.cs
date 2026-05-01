@@ -116,7 +116,7 @@ public class WebSocketServer
 
                 var json = Encoding.UTF8.GetString(buffer, 0, result.Count);
                 Logger.Info($"收到命令: {json}");
-                ProcessCommand(json, ws);
+                _ = ProcessCommandAsync(json, ws);
             }
         }
         catch (OperationCanceledException)
@@ -136,7 +136,7 @@ public class WebSocketServer
         Logger.Info("WebSocket 连接已关闭");
     }
 
-    private async void ProcessCommand(string json, WebSocket ws)
+    private async Task ProcessCommandAsync(string json, WebSocket ws)
     {
         try
         {
@@ -171,8 +171,15 @@ public class WebSocketServer
             var errorMsg = ex.Message ?? "Unknown error";
             var response = new { success = false, error = errorMsg };
             var bytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(response));
-            await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
-            Logger.Info($"返回错误: {JsonConvert.SerializeObject(response)}");
+            try
+            {
+                Logger.Info($"返回错误: {JsonConvert.SerializeObject(response)}");
+                await ws.SendAsync(new ArraySegment<byte>(bytes), WebSocketMessageType.Text, true, CancellationToken.None);
+            }
+            catch (Exception sendEx)
+            {
+                Logger.Error("发送错误响应失败（连接可能已断开）", sendEx);
+            }
         }
     }
 }

@@ -137,18 +137,41 @@ public partial class App : Application
     private void ExitApplication()
     {
         Logger.Info("开始退出应用");
-        _wsServer?.Stop();
-        Logger.Info("WebSocket服务已停止");
-
-        if (_notifyIcon != null)
+        try
         {
-            _notifyIcon.Dispose();
-            _notifyIcon = null;
-            Logger.Info("托盘图标已释放");
+            _wsServer?.Stop();
+            Logger.Info("WebSocket服务已停止");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("停止 WebSocket 服务异常", ex);
         }
 
-        _mainWindow?.Close();
-        Logger.Info("主窗口已关闭");
+        try
+        {
+            if (_notifyIcon != null)
+            {
+                _notifyIcon.Dispose();
+                _notifyIcon = null;
+                Logger.Info("托盘图标已释放");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("释放托盘图标异常", ex);
+        }
+
+        try
+        {
+            _mainWindow?.Close();
+            Logger.Info("主窗口已关闭");
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("关闭主窗口异常", ex);
+        }
+
+        Logger.Info("强制退出进程");
         Environment.Exit(0);
     }
 
