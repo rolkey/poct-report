@@ -40,3 +40,10 @@
   Session   FastReport项目.NET版本调整
   Continue  opencode -s ses_227397608ffeAhpVM66UZ1AvJm
 ```
+
+## 处理报表设计器问题
+
+```
+  Session   FastReport报表设计界面打开方法
+  Continue  opencode -s ses_2214b656effegKsmNp0uxuq6tf
+```

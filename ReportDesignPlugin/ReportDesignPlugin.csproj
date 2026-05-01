@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <AssemblyName>ReportDesignPlugin</AssemblyName>
+  </PropertyGroup>
+
+  <!-- 输出到 designPlugs 目录 -->
+  <PropertyGroup>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>..\TrayApp\designPlugs</OutputPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="FastReport">
+      <HintPath>..\FastReport.Net Demo\FastReport.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="FastReport.Bars">
+      <HintPath>..\FastReport.Net Demo\FastReport.Bars.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="FastReport.Editor">
+      <HintPath>..\FastReport.Net Demo\FastReport.Editor.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- 构建后将依赖的 DLL 也复制到 designPlugs -->
+  <Target Name="CopyDependencies" AfterTargets="Build">
+    <Copy SourceFiles="..\FastReport.Net Demo\FastReport.dll" DestinationFolder="..\TrayApp\designPlugs" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="..\FastReport.Net Demo\FastReport.Bars.dll" DestinationFolder="..\TrayApp\designPlugs" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="..\FastReport.Net Demo\FastReport.Editor.dll" DestinationFolder="..\TrayApp\designPlugs" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="..\FastReport.Net Demo\FastReport.xml" DestinationFolder="..\TrayApp\designPlugs" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

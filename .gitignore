@@ -14,6 +14,9 @@ FastReport.Net Demo/
 TrayApp/plugins/*.dll
 TrayApp/plugins/*.pdb
 TrayApp/plugins/*.deps.json
+TrayApp/designPlugs/*.dll
+TrayApp/designPlugs/*.pdb
+TrayApp/designPlugs/*.deps.json
 
 # NuGet
 *.nupkg

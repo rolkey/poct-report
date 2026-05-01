@@ -6,7 +6,7 @@ namespace TrayApp.Plugins;
 public class PluginManager
 {
     private readonly Dictionary<string, object> _pluginInstances = new();
-    private readonly string _pluginDir = "plugins";
+    private readonly string[] _pluginDirs = ["designPlugs", "plugins"];
 
     public object? Invoke(string pluginName, string method, object?[] parameters)
     {
@@ -113,47 +113,53 @@ public class PluginManager
 
     private object? TryLoadPlugin(string pluginName)
     {
-        // 1. 当前工作目录（可能被修改）
         Logger.Info($"CurrentDirectory: {Environment.CurrentDirectory}");
-        
-        // 2. 应用程序基目录（推荐用于配置文件读取）
         Logger.Info($"BaseDirectory: {AppDomain.CurrentDomain.BaseDirectory}");
 
-        if (!Directory.Exists(_pluginDir))
+        // 按优先级依次搜索 designPlugs → plugins
+        foreach (var dir in _pluginDirs)
         {
-            Logger.Warn($"插件目录不存在: {_pluginDir}");
-            return null;
-        }
-
-        var dllPath = Path.Combine(_pluginDir, $"{pluginName}.dll");
-        if (!File.Exists(dllPath))
-        {
-            Logger.Warn($"插件 DLL 不存在: {dllPath}");
-            return null;
-        }
-
-        try
-        {
-            var assembly = Assembly.LoadFrom(dllPath);
-            var expectedTypeName = $"{pluginName}.{pluginName}";
-            var type = assembly.GetTypes()
-                .FirstOrDefault(t => t.FullName == expectedTypeName && t.IsClass && !t.IsAbstract);
-
-            if (type == null)
+            if (!Directory.Exists(dir))
             {
-                Logger.Warn($"DLL 中未找到类: {expectedTypeName}");
-                return null;
+                Logger.Info($"插件目录不存在: {dir}，跳过");
+                continue;
             }
 
-            var instance = Activator.CreateInstance(type);
-            Logger.Info($"动态加载插件成功: {pluginName}");
-            return instance;
+            var dllPath = Path.Combine(dir, $"{pluginName}.dll");
+            if (!File.Exists(dllPath))
+            {
+                Logger.Info($"插件 DLL 不存在: {dllPath}，跳过");
+                continue;
+            }
+
+            Logger.Info($"从目录加载插件: {dir}");
+
+            try
+            {
+                var assembly = Assembly.LoadFrom(dllPath);
+                var expectedTypeName = $"{pluginName}.{pluginName}";
+                var type = assembly.GetTypes()
+                    .FirstOrDefault(t => t.FullName == expectedTypeName && t.IsClass && !t.IsAbstract);
+
+                if (type == null)
+                {
+                    Logger.Warn($"DLL 中未找到类: {expectedTypeName}");
+                    continue;
+                }
+
+                var instance = Activator.CreateInstance(type);
+                Logger.Info($"动态加载插件成功: {pluginName} (来自 {dir})");
+                return instance;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"加载 DLL 失败: {dllPath}", ex);
+                continue;
+            }
         }
-        catch (Exception ex)
-        {
-            Logger.Error($"加载 DLL 失败: {dllPath}", ex);
-            return null;
-        }
+
+        Logger.Warn($"所有目录均未找到插件: {pluginName}");
+        return null;
     }
 
     public List<string> GetLoadedPlugins() => _pluginInstances.Keys.ToList();

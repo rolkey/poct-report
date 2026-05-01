@@ -87,68 +87,76 @@ public class ReportPlugin
 
     public string PreviewReport(string reportName)
     {
-        var outputDir = Path.Combine(Directory.GetCurrentDirectory(), "export");
-        if (!Directory.Exists(outputDir))
-            Directory.CreateDirectory(outputDir);
+        // var outputDir = Path.Combine(Directory.GetCurrentDirectory(), "export");
+        // if (!Directory.Exists(outputDir))
+        //     Directory.CreateDirectory(outputDir);
 
-        var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-        var filePath = Path.Combine(outputDir, $"{Path.GetFileNameWithoutExtension(reportName)}_{timestamp}.pdf");
+        // var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+        // var filePath = Path.Combine(outputDir, $"{Path.GetFileNameWithoutExtension(reportName)}_{timestamp}.pdf");
 
         Report report = CreateReport(reportName);
+        var stream = new MemoryStream();
 
         try
         {
             report.Prepare();
-            report.Export(new PDFSimpleExport(), filePath);
+            // 直接导出报表到内存流中
+            report.Export(new PDFSimpleExport(), stream);
 
-            var bytes = File.ReadAllBytes(filePath);
-            // return $"data:application/pdf;base64,{Convert.ToBase64String(bytes)}";
+            // 将流的位置重置为起始位置，以便读取
+            stream.Position = 0;
+
+            // 将内存流转换为字节数组
+            var bytes = stream.ToArray();
+
+            // 将字节数组转换为 Base64 字符串
             return Convert.ToBase64String(bytes);
         }
         finally
         {
+            stream.Dispose();
             report.Dispose();
         }
     }
 
-    public string DesignReport(string reportName)
-    {
-        var reportFile = Path.Combine(TemplateDirectory, reportName);
-        if (File.Exists(reportFile))
-        {
-            var frxContent = File.ReadAllText(reportFile);
-            return Newtonsoft.Json.JsonConvert.SerializeObject(new
-            {
-                templatePath = reportFile,
-                templateName = reportName,
-                templateXml = frxContent,
-                message = "Use this XML to edit the report template in an external editor, then save back to the template path."
-            });
-        }
+    // public string DesignReport(string reportName)
+    // {
+    //     var reportFile = Path.Combine(TemplateDirectory, reportName);
+    //     if (File.Exists(reportFile))
+    //     {
+    //         var frxContent = File.ReadAllText(reportFile);
+    //         return Newtonsoft.Json.JsonConvert.SerializeObject(new
+    //         {
+    //             templatePath = reportFile,
+    //             templateName = reportName,
+    //             templateXml = frxContent,
+    //             message = "Use this XML to edit the report template in an external editor, then save back to the template path."
+    //         });
+    //     }
 
-        // For code-generated reports (SimpleList, Group), return the structure info
-        var report = CreateReport(reportName);
-        try
-        {
-            report.Prepare();
-            using var ms = new MemoryStream();
-            report.Save(ms);
-            ms.Position = 0;
-            var xml = new System.Xml.XmlDocument();
-            xml.Load(ms);
-            return Newtonsoft.Json.JsonConvert.SerializeObject(new
-            {
-                templatePath = "(code-generated)",
-                templateName = reportName,
-                templateXml = xml.OuterXml,
-                message = "This is a code-generated report. Save the XML as a .frx file to customize."
-            });
-        }
-        finally
-        {
-            report.Dispose();
-        }
-    }
+    //     // For code-generated reports (SimpleList, Group), return the structure info
+    //     var report = CreateReport(reportName);
+    //     try
+    //     {
+    //         report.Prepare();
+    //         using var ms = new MemoryStream();
+    //         report.Save(ms);
+    //         ms.Position = 0;
+    //         var xml = new System.Xml.XmlDocument();
+    //         xml.Load(ms);
+    //         return Newtonsoft.Json.JsonConvert.SerializeObject(new
+    //         {
+    //             templatePath = "(code-generated)",
+    //             templateName = reportName,
+    //             templateXml = xml.OuterXml,
+    //             message = "This is a code-generated report. Save the XML as a .frx file to customize."
+    //         });
+    //     }
+    //     finally
+    //     {
+    //         report.Dispose();
+    //     }
+    // }
 
     private Report CreateReport(string reportName)
     {
