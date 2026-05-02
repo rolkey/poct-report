@@ -11,12 +11,8 @@ TrayApp/obj/
 FastReport.Net Demo/
 
 # Plugins output (build locally)
-TrayApp/plugins/*.dll
-TrayApp/plugins/*.pdb
-TrayApp/plugins/*.deps.json
-TrayApp/designPlugs/*.dll
-TrayApp/designPlugs/*.pdb
-TrayApp/designPlugs/*.deps.json
+TrayApp/plugins/**
+TrayApp/designPlugs/**
 
 # NuGet
 *.nupkg

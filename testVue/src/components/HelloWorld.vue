@@ -84,11 +84,21 @@ const previewReport = () => {
   sendCommand(cmd);
 };
 
+const printReport = () => {
+  const cmd = {
+    command: "printReport",
+    plugin: "ReportPlugin",
+    method: "PreviewReport",
+    params: [reportType.value],
+  };
+  sendCommand(cmd);
+};
+
 // 设计报表
 const designReport = () => {
   const cmd = {
     command: "designReport",
-    plugin: "ReportPlugin",
+    plugin: "ReportDesignPlugin",
     method: "DesignReport",
     params: [reportType.value],
   };
@@ -132,6 +142,7 @@ onBeforeUnmount(() => {
     <div style="margin: 10px 0; display: flex; gap: 10px; justify-content: center">
       <button type="button" class="counter" @click="generateReport">生成报表</button>
       <button type="button" class="counter" @click="previewReport">预览报表</button>
+      <button type="button" class="counter" @click="printReport">打印报表</button>
       <button type="button" class="counter" @click="designReport">设计报表</button>
     </div>
 
