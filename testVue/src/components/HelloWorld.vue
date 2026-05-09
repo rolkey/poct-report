@@ -11,6 +11,7 @@ const reportTypes = [
   "Master-Detail.frx",
   "Barcode.frx",
   "Groups.frx",
+  "Interactive Chart.frx",
   "Simple Matrix.frx",
 ];
 
@@ -88,8 +89,8 @@ const printReport = () => {
   const cmd = {
     command: "printReport",
     plugin: "ReportPlugin",
-    method: "PreviewReport",
-    params: [reportType.value],
+    method: "PrintReport",
+    params: [reportType.value, null],
   };
   sendCommand(cmd);
 };

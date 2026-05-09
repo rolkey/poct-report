@@ -9,6 +9,9 @@ TrayApp/obj/
 
 # other directory
 FastReport.Net Demo/
+FastReport.Avalonia.LinuxDemo/
+FastReport.Netx/
+frmono_demo/
 
 # Plugins output (build locally)
 TrayApp/plugins/**
@@ -23,6 +26,8 @@ packages/
 *.suo
 *.userosscache
 *.tar.gz
+*.zip
+*.deb
 
 # VS
 .vs/

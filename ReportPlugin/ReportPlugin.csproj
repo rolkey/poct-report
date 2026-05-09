@@ -13,8 +13,24 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\FastReport\FastReport.OpenSource\FastReport.OpenSource.csproj" />
-    <ProjectReference Include="..\FastReport\Extras\OpenSource\FastReport.OpenSource.Export.PdfSimple\FastReport.OpenSource.Export.PdfSimple\FastReport.OpenSource.Export.PdfSimple.csproj" />
+    <!-- 引用 FastReport6.0 编译输出的 DLL（启用了 MSCHART 常量） -->
+    <ProjectReference Include="..\FastReport6.0\FastReport.OpenSource\FastReport.OpenSource.csproj" />
+    <ProjectReference Include="..\FastReport6.0\Extras\OpenSource\FastReport.OpenSource.Export.PdfSimple\FastReport.OpenSource.Export.PdfSimple\FastReport.OpenSource.Export.PdfSimple.csproj" />
+
+
+    <!-- 使用mono例子 -->
+    <!-- <Reference Include="FastReport">
+      <HintPath>..\frmono_demo\FastReport.Mono.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="FastReport.Compat">
+      <HintPath>..\frmono_demo\FastReport.Compat.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="FastReport.Web">
+      <HintPath>..\frmono_demo\FastReport.Web.dll</HintPath>
+      <Private>true</Private>
+    </Reference> -->
   </ItemGroup>
 
 </Project>

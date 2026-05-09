@@ -3,6 +3,7 @@ using System.Drawing;
 using FastReport;
 using FastReport.Export.Image;
 using FastReport.Export.PdfSimple;
+// using FastReport.Web.WebReport.PrintPdf
 using FastReport.Utils;
 // using Newtonsoft.Json; // 添加这一行
 
@@ -306,6 +307,46 @@ public class ReportPlugin
 
         ds.Tables.Add(dt);
         return ds;
+    }
+
+    public string PrintReport(string reportName, string? printerName = null)
+    {
+        Report report = CreateReport(reportName);
+        var pdfPath = Path.Combine(Path.GetTempPath(), $"{Path.GetFileNameWithoutExtension(reportName)}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf");
+
+        try
+        {
+            report.Prepare();
+            report.Export(new PDFSimpleExport(), pdfPath);
+        }
+        finally
+        {
+            report.Dispose();
+        }
+
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo(pdfPath)
+            {
+                UseShellExecute = true,
+                Verb = "print"
+            };
+
+            if (!string.IsNullOrEmpty(printerName))
+            {
+                psi.Arguments = $"/t \"{pdfPath}\" \"{printerName}\"";
+                psi.FileName = "AcroRd32.exe";
+                psi.UseShellExecute = false;
+            }
+
+            System.Diagnostics.Process.Start(psi);
+
+            return $"报表 {reportName} 已发送到打印机";
+        }
+        catch (Exception ex)
+        {
+            return $"打印失败: {ex.Message}。PDF 已保存到: {pdfPath}";
+        }
     }
 
     public string GetInfo() => "ReportPlugin v1.0 - FastReport";

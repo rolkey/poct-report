@@ -12,9 +12,11 @@
 ├── TrayApp/          # 核心：WPF 托盘程序 + WebSocket 服务 + 插件加载器
 ├── ReportPlugin/     # 插件：基于 FastReport 的报表生成（PDF/PNG/JPG）
 ├── ExamplePlugin/    # 插件：简单演示插件（greet/echo/add）
+├── ReportDesignPlugin/  # 插件：FastReport 可视化报表设计器（仅 Windows，商业版 DLL）
 ├── testVue/          # 前端：Vue 3 + TypeScript WebSocket 客户端
-├── FastReport/       # 子模块：FastReport.OpenSource 库
-├── FastReport.Net Demo/  # 第三方示例（非项目代码）
+├── FastReport6.0/    # FastReport 开源库源码
+├── FastReport.NET/   # FastReport 开源库源码（备用）
+├── FastReport.Net Demo/  # 第三方示例 + 商业版 DLL（非项目代码）
 ├── docs/             # 设计文档/规格
 └── publish/          # 构建输出产物（gitignored）
 ```
@@ -26,12 +28,15 @@
 | WebSocket 协议 | `TrayApp/WebSocketServer.cs` | JSON 命令分发 |
 | 插件加载 | `TrayApp/PluginManager.cs` | 动态 DLL 反射 |
 | 报表生成 | `ReportPlugin/ReportPlugin.cs` | FastReport 封装 |
+| 报表设计器 | `ReportDesignPlugin/ReportDesignPlugin.cs` | 可视化设计器（仅 Windows） |
+| 设计器 WPF 窗口 | `ReportDesignPlugin/DesignerWindow.xaml.cs` | 内嵌 `DesignerControl` |
 | 前端界面 | `testVue/src/` | Vue 3 SFC |
 | 前端 WS 客户端 | `testVue/src/utils/websocket.ts` | WebSocket 组合式函数 |
 
 ## 约定
 - 插件 DLL 命名规则：`{命名空间}.{类名}`（如 `ExamplePlugin.ExamplePlugin`）
 - 插件方法使用基于约定的反射（无接口/抽象类）
+- 插件搜索优先级：`designPlugs/` → `plugins/`（`designPlugs` 放商业版 DLL，`plugins` 放开源版）
 - WebSocket JSON 格式：`{"plugin":"...","method":"...","params":[...]}`
 - 响应格式：`{"success":true/false, "data":..., "error":"..."}`
 - C#：文件范围命名空间、可空类型启用、隐式 using、`_camelCase` 私有字段
@@ -52,6 +57,7 @@ dotnet build TrayApp/TrayApp.csproj
 # 构建插件
 dotnet build ExamplePlugin/ExamplePlugin.csproj
 dotnet build ReportPlugin/ReportPlugin.csproj
+dotnet build ReportDesignPlugin/ReportDesignPlugin.csproj
 
 # 启动 Vue 前端
 cd testVue && npm run dev
@@ -67,3 +73,5 @@ dotnet publish TrayApp/TrayApp.csproj -c Release -o publish/
 - 插件在首次调用时懒加载
 - 无根 `.sln` — 每个项目单独构建
 - 无 `Directory.Build.props` — NuGet 版本在 3 个 `.csproj` 中重复
+- ReportDesignPlugin 输出到 `designPlugs/`，其余插件输出到 `plugins/`
+- 构建 TrayApp 前需先构建所有插件
